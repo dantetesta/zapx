@@ -424,6 +424,97 @@ class CampaignController extends Controller {
     }
 
     /**
+     * Página de relatórios de campanhas
+     */
+    public function reports() {
+        $this->requireAuth();
+        
+        $user = $this->getCurrentUser();
+        $userId = $user['id'];
+        
+        // Buscar todas as campanhas do usuário
+        $campaigns = $this->campaignModel->getByUser($userId);
+        
+        // Estatísticas gerais
+        $totalCampaigns = count($campaigns);
+        $totalSent = 0;
+        $totalFailed = 0;
+        $totalContacts = 0;
+        $completedCampaigns = 0;
+        $runningCampaigns = 0;
+        
+        foreach ($campaigns as $campaign) {
+            $totalSent += $campaign['sent_count'];
+            $totalFailed += $campaign['failed_count'];
+            $totalContacts += $campaign['total_contacts'];
+            
+            if ($campaign['status'] === 'completed') {
+                $completedCampaigns++;
+            }
+            if ($campaign['status'] === 'running') {
+                $runningCampaigns++;
+            }
+        }
+        
+        // Taxa de sucesso
+        $successRate = ($totalSent + $totalFailed) > 0 
+            ? round(($totalSent / ($totalSent + $totalFailed)) * 100, 1) 
+            : 0;
+        
+        // Buscar detalhes da fila para campanhas recentes
+        $recentCampaigns = array_slice($campaigns, 0, 10);
+        foreach ($recentCampaigns as &$campaign) {
+            $campaign['queue_stats'] = $this->queueModel->countByStatus($campaign['id']);
+        }
+        
+        $this->view('campaign/reports', [
+            'user' => $user,
+            'campaigns' => $campaigns,
+            'recentCampaigns' => $recentCampaigns,
+            'stats' => [
+                'totalCampaigns' => $totalCampaigns,
+                'totalSent' => $totalSent,
+                'totalFailed' => $totalFailed,
+                'totalContacts' => $totalContacts,
+                'completedCampaigns' => $completedCampaigns,
+                'runningCampaigns' => $runningCampaigns,
+                'successRate' => $successRate
+            ]
+        ]);
+    }
+
+    /**
+     * API: Detalhes de uma campanha para relatório
+     */
+    public function reportDetail($id = null) {
+        $this->requireAuth();
+        
+        if (!$id) {
+            $this->json(['success' => false, 'message' => 'ID não informado'], 400);
+            return;
+        }
+        
+        $user = $this->getCurrentUser();
+        $campaign = $this->campaignModel->findById($id, $user['id']);
+        
+        if (!$campaign) {
+            $this->json(['success' => false, 'message' => 'Campanha não encontrada'], 404);
+            return;
+        }
+        
+        // Buscar itens da fila com detalhes
+        $queueItems = $this->queueModel->getWithContactInfo($id);
+        $stats = $this->queueModel->countByStatus($id);
+        
+        $this->json([
+            'success' => true,
+            'campaign' => $campaign,
+            'queueItems' => $queueItems,
+            'stats' => $stats
+        ]);
+    }
+
+    /**
      * Processar upload de mídia
      */
     private function processMediaUpload($file, $mediaType) {

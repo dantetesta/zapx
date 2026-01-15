@@ -186,4 +186,31 @@ class Queue {
         $result = $stmt->fetch();
         return $result['count'] > 0;
     }
+
+    /**
+     * Obter itens com informações de contato para relatórios
+     */
+    public function getWithContactInfo($campaignId, $limit = 500) {
+        $sql = "SELECT q.*, c.name as contact_name, c.phone as contact_phone
+                FROM dispatch_queue q
+                INNER JOIN contacts c ON q.contact_id = c.id
+                WHERE q.campaign_id = :campaign_id
+                ORDER BY 
+                    CASE q.status 
+                        WHEN 'failed' THEN 1 
+                        WHEN 'sent' THEN 2 
+                        WHEN 'processing' THEN 3 
+                        WHEN 'pending' THEN 4 
+                        ELSE 5 
+                    END,
+                    q.sent_at DESC
+                LIMIT :limit";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindValue(':campaign_id', $campaignId, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        
+        return $stmt->fetchAll();
+    }
 }

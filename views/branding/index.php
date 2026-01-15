@@ -169,9 +169,106 @@ include 'views/layouts/navbar.php';
                 <li>✅ Teste em diferentes tamanhos antes de salvar</li>
             </ul>
         </div>
+
+        <!-- Configuração do Cron Job -->
+        <div class="mt-6 bg-orange-50 border border-orange-200 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-orange-800 mb-3">
+                <i class="fas fa-clock mr-2"></i>
+                Configuração do Cron Job (Campanhas)
+            </h3>
+            <p class="text-sm text-orange-700 mb-4">
+                Para que as campanhas de disparo funcionem em segundo plano, configure um Cron Job no painel do servidor:
+            </p>
+            
+            <div class="bg-white rounded-lg p-4 mb-4 border border-orange-200">
+                <p class="text-xs text-orange-600 mb-2 font-semibold">Comando do Cron (executar a cada minuto):</p>
+                <div class="flex items-center gap-2">
+                    <code id="cronCommand" class="flex-1 text-sm bg-gray-100 p-3 rounded font-mono text-gray-800 break-all">* * * * * php <?php echo dirname($_SERVER['DOCUMENT_ROOT']); ?>/public_html/cron/process_queue.php >> /dev/null 2>&1</code>
+                    <button onclick="copyCron()" class="px-3 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition flex-shrink-0">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                <div class="bg-white rounded p-3 border border-orange-200">
+                    <p class="font-semibold text-orange-800 text-sm mb-1">
+                        <i class="fas fa-server mr-1"></i> cPanel
+                    </p>
+                    <p class="text-xs text-gray-600">Cron Jobs → Adicionar → A cada minuto</p>
+                </div>
+                <div class="bg-white rounded p-3 border border-orange-200">
+                    <p class="font-semibold text-orange-800 text-sm mb-1">
+                        <i class="fas fa-server mr-1"></i> DirectAdmin
+                    </p>
+                    <p class="text-xs text-gray-600">Advanced → Cron Jobs → Create</p>
+                </div>
+                <div class="bg-white rounded p-3 border border-orange-200">
+                    <p class="font-semibold text-orange-800 text-sm mb-1">
+                        <i class="fas fa-server mr-1"></i> Plesk
+                    </p>
+                    <p class="text-xs text-gray-600">Tarefas Agendadas → Adicionar</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <a href="<?php echo APP_URL; ?>/docs/CRON_SETUP.md" target="_blank" 
+                   class="inline-flex items-center px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded hover:bg-orange-700 transition">
+                    <i class="fas fa-book mr-2"></i>
+                    Ver Documentação Completa
+                </a>
+                <span class="text-xs text-orange-600">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Sem cron? O sistema tem fallback via AJAX.
+                </span>
+            </div>
+        </div>
+
+        <!-- Informações do Sistema -->
+        <div class="mt-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <h3 class="text-sm font-semibold text-gray-700 mb-3">
+                <i class="fas fa-info-circle mr-1"></i>
+                Informações do Sistema
+            </h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                    <span class="text-gray-500">Versão:</span>
+                    <span class="font-semibold text-purple-600"><?php echo defined('SYSTEM_VERSION') ? SYSTEM_VERSION : '---'; ?></span>
+                </div>
+                <div>
+                    <span class="text-gray-500">PHP:</span>
+                    <span class="font-semibold"><?php echo PHP_VERSION; ?></span>
+                </div>
+                <div>
+                    <span class="text-gray-500">Servidor:</span>
+                    <span class="font-semibold"><?php echo php_uname('s'); ?></span>
+                </div>
+                <div>
+                    <span class="text-gray-500">Data:</span>
+                    <span class="font-semibold"><?php echo date('d/m/Y H:i'); ?></span>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
+    // Copiar comando do cron
+    function copyCron() {
+        const cronText = document.getElementById('cronCommand').textContent;
+        navigator.clipboard.writeText(cronText).then(() => {
+            alert('Comando copiado para a área de transferência!');
+        }).catch(() => {
+            // Fallback para navegadores antigos
+            const textArea = document.createElement('textarea');
+            textArea.value = cronText;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            alert('Comando copiado!');
+        });
+    }
+
     // Preview do logo antes de fazer upload
     function previewLogo(input) {
         const preview = document.getElementById('logoPreview');

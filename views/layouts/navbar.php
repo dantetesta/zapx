@@ -53,20 +53,14 @@
                         Tags
                     </a>
                     
-                    <a href="<?php echo APP_URL; ?>/dispatch/index" 
-                       class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md <?php echo (strpos($_SERVER['REQUEST_URI'], '/dispatch') !== false && strpos($_SERVER['REQUEST_URI'], '/campaign') === false) ? 'text-purple-600 bg-purple-50' : 'text-gray-700 hover:text-purple-600 hover:bg-gray-50'; ?>">
-                        <i class="fas fa-paper-plane mr-2"></i>
-                        Disparar
-                    </a>
-                    
                     <a href="<?php echo APP_URL; ?>/campaign/index" 
                        class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md <?php echo (strpos($_SERVER['REQUEST_URI'], '/campaign') !== false) ? 'text-purple-600 bg-purple-50' : 'text-gray-700 hover:text-purple-600 hover:bg-gray-50'; ?>">
                         <i class="fas fa-bullhorn mr-2"></i>
                         Campanhas
                     </a>
                     
-                    <a href="<?php echo APP_URL; ?>/reports/index" 
-                       class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md <?php echo (strpos($_SERVER['REQUEST_URI'], '/reports') !== false) ? 'text-purple-600 bg-purple-50' : 'text-gray-700 hover:text-purple-600 hover:bg-gray-50'; ?>">
+                    <a href="<?php echo APP_URL; ?>/campaign/reports" 
+                       class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md <?php echo (strpos($_SERVER['REQUEST_URI'], '/campaign/reports') !== false) ? 'text-purple-600 bg-purple-50' : 'text-gray-700 hover:text-purple-600 hover:bg-gray-50'; ?>">
                         <i class="fas fa-chart-line mr-2"></i>
                         Relatórios
                     </a>
@@ -146,15 +140,11 @@
                 <i class="fas fa-tags mr-2"></i>
                 Tags
             </a>
-            <a href="<?php echo APP_URL; ?>/dispatch/index" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-purple-600 hover:bg-gray-50">
-                <i class="fas fa-paper-plane mr-2"></i>
-                Disparar
-            </a>
             <a href="<?php echo APP_URL; ?>/campaign/index" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-purple-600 hover:bg-gray-50">
                 <i class="fas fa-bullhorn mr-2"></i>
                 Campanhas
             </a>
-            <a href="<?php echo APP_URL; ?>/reports/index" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-purple-600 hover:bg-gray-50">
+            <a href="<?php echo APP_URL; ?>/campaign/reports" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-purple-600 hover:bg-gray-50">
                 <i class="fas fa-chart-line mr-2"></i>
                 Relatórios
             </a>
