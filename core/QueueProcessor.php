@@ -14,7 +14,10 @@ class QueueProcessor {
     private $queueModel;
     private $userModel;
     private $processId;
-    private $maxExecutionTime = 55; // Segundos (menos que 1 min do cron)
+    private $maxExecutionTime = 55;
+    private $maxConsecutiveFailures = 5; // Pausa após X falhas seguidas
+    private $maxRetries = 3; // Tentativas por mensagem
+    private $consecutiveFailures = 0;
 
     public function __construct() {
         $this->db = Database::getInstance()->getConnection();
@@ -119,6 +122,24 @@ class QueueProcessor {
             return false;
         }
         
+        // Verificar status da instância (a cada 10 itens ou primeira vez)
+        static $instanceCheckCount = 0;
+        if ($instanceCheckCount % 10 === 0) {
+            $instanceStatus = $this->checkInstanceStatus($user);
+            if (!$instanceStatus['connected']) {
+                error_log("⚠️ [{$this->processId}] Instância desconectada: {$instanceStatus['state']}");
+                $this->queueModel->markForRetry($item['id'], 'Instância WhatsApp desconectada');
+                $this->consecutiveFailures++;
+                
+                if ($this->consecutiveFailures >= 3) {
+                    $this->campaignModel->updateStatus($campaign['id'], 'paused');
+                    error_log("⛔ [{$this->processId}] Campanha pausada: WhatsApp desconectado");
+                }
+                return false;
+            }
+        }
+        $instanceCheckCount++;
+        
         // Verificar limite de mensagens
         if (!$this->userModel->canSendMessage($campaign['user_id'])) {
             $this->queueModel->markFailed($item['id'], 'Limite de mensagens atingido');
@@ -140,6 +161,7 @@ class QueueProcessor {
             $this->queueModel->markSent($item['id']);
             $this->campaignModel->incrementCounter($campaign['id'], 'sent_count');
             $this->userModel->incrementMessageCount($campaign['user_id'], 1);
+            $this->consecutiveFailures = 0; // Reset contador de falhas
             error_log("✅ [{$this->processId}] Enviado para {$item['contact_phone']}");
             
             // Aguardar intervalo aleatório
@@ -149,9 +171,34 @@ class QueueProcessor {
             
             return true;
         } else {
-            $this->queueModel->markFailed($item['id'], $result['error']);
-            $this->campaignModel->incrementCounter($campaign['id'], 'failed_count');
-            error_log("❌ [{$this->processId}] Falha: {$result['error']}");
+            $this->consecutiveFailures++;
+            
+            // Verificar se é erro recuperável e se pode tentar novamente
+            $attempts = $item['attempts'] ?? 0;
+            $isRecoverable = $this->isRecoverableError($result['error']);
+            
+            if ($isRecoverable && $attempts < $this->maxRetries) {
+                // Voltar para pending para retry
+                $this->queueModel->markForRetry($item['id'], $result['error']);
+                error_log("🔄 [{$this->processId}] Retry agendado para {$item['contact_phone']} (tentativa " . ($attempts + 1) . ")");
+            } else {
+                $this->queueModel->markFailed($item['id'], $result['error']);
+                $this->campaignModel->incrementCounter($campaign['id'], 'failed_count');
+                error_log("❌ [{$this->processId}] Falha permanente: {$result['error']}");
+            }
+            
+            // Pausar campanha se muitas falhas consecutivas
+            if ($this->consecutiveFailures >= $this->maxConsecutiveFailures) {
+                $this->campaignModel->updateStatus($campaign['id'], 'paused');
+                error_log("⛔ [{$this->processId}] Campanha pausada: {$this->maxConsecutiveFailures} falhas consecutivas");
+                return false;
+            }
+            
+            // Aguardar mesmo após falha (evita rate limiting)
+            $interval = rand(5, 10);
+            error_log("⏳ [{$this->processId}] Aguardando {$interval}s após falha...");
+            sleep($interval);
+            
             return false;
         }
     }
@@ -240,9 +287,76 @@ class QueueProcessor {
     }
 
     /**
+     * Verificar se é erro recuperável (pode tentar novamente)
+     */
+    private function isRecoverableError($error) {
+        $recoverablePatterns = [
+            'timeout',
+            'connection',
+            'temporarily',
+            'rate limit',
+            'too many',
+            'busy',
+            'unavailable',
+            'try again',
+            '429',
+            '500',
+            '502',
+            '503',
+            '504'
+        ];
+        
+        $errorLower = strtolower($error);
+        foreach ($recoverablePatterns as $pattern) {
+            if (strpos($errorLower, $pattern) !== false) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Verificar status da instância antes de enviar
+     */
+    private function checkInstanceStatus($user) {
+        $apiUrl = EVOLUTION_API_URL;
+        $apiKey = $user['evolution_instance_token'];
+        $instance = $user['evolution_instance'];
+        
+        $endpoint = rtrim($apiUrl, '/') . '/instance/connectionState/' . $instance;
+        
+        $ch = curl_init($endpoint);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'apikey: ' . $apiKey
+        ]);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        if ($httpCode !== 200) {
+            return ['connected' => false, 'error' => 'Não foi possível verificar status'];
+        }
+        
+        $data = json_decode($response, true);
+        $state = $data['instance']['state'] ?? $data['state'] ?? 'unknown';
+        
+        return [
+            'connected' => ($state === 'open' || $state === 'connected'),
+            'state' => $state
+        ];
+    }
+
+    /**
      * Fazer requisição para Evolution API
      */
     private function makeAPIRequest($endpoint, $apiKey, $data) {
+        $startTime = microtime(true);
+        
         $ch = curl_init($endpoint);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
@@ -252,21 +366,52 @@ class QueueProcessor {
             'apikey: ' . $apiKey
         ]);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 180);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15); // Reduzido para 15s
+        curl_setopt($ch, CURLOPT_TIMEOUT, 60); // Reduzido para 60s
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $totalTime = curl_getinfo($ch, CURLINFO_TOTAL_TIME);
         $error = curl_error($ch);
+        $errno = curl_errno($ch);
         curl_close($ch);
+        
+        $executionTime = round(microtime(true) - $startTime, 2);
+        error_log("📡 [{$this->processId}] API Response: HTTP {$httpCode} em {$executionTime}s");
 
         if ($error) {
+            // Erros específicos de timeout
+            if ($errno === CURLE_OPERATION_TIMEDOUT) {
+                return ['success' => false, 'error' => 'Timeout na conexão (API lenta)'];
+            }
+            if ($errno === CURLE_COULDNT_CONNECT) {
+                return ['success' => false, 'error' => 'Não foi possível conectar à API'];
+            }
             return ['success' => false, 'error' => 'Erro de conexão: ' . $error];
+        }
+
+        if ($httpCode === 0) {
+            return ['success' => false, 'error' => 'Sem resposta da API'];
+        }
+
+        if ($httpCode === 429) {
+            return ['success' => false, 'error' => 'Rate limit - muitas requisições'];
+        }
+
+        if ($httpCode >= 500) {
+            return ['success' => false, 'error' => "Erro no servidor da API (HTTP {$httpCode})"];
         }
 
         if ($httpCode !== 200 && $httpCode !== 201) {
             $responseData = json_decode($response, true);
             $errorMsg = $responseData['message'] ?? $responseData['error'] ?? 'Erro HTTP ' . $httpCode;
+            
+            // Log detalhado para debug
+            error_log("❌ [{$this->processId}] API Error: {$errorMsg}");
+            if (!empty($responseData)) {
+                error_log("❌ [{$this->processId}] Response: " . json_encode($responseData));
+            }
+            
             return ['success' => false, 'error' => $errorMsg];
         }
 

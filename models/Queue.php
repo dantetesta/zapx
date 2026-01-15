@@ -95,6 +95,15 @@ class Queue {
     }
 
     /**
+     * Marcar item para retry (volta para pending)
+     */
+    public function markForRetry($id, $errorMessage = null) {
+        $sql = "UPDATE dispatch_queue SET status = 'pending', error_message = :error, attempts = attempts + 1, scheduled_at = DATE_ADD(NOW(), INTERVAL 30 SECOND) WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([':id' => $id, ':error' => $errorMessage]);
+    }
+
+    /**
      * Cancelar itens pendentes de uma campanha
      */
     public function cancelPending($campaignId) {
