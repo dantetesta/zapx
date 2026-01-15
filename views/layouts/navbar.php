@@ -90,7 +90,7 @@
                             Meu Perfil
                         </a>
                         <a href="<?php echo APP_URL; ?>/greeting/index" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
-                            <i class="fas fa-hand-wave mr-2 text-purple-600"></i>
+                            <i class="fas fa-comment-dots mr-2 text-purple-600"></i>
                             Saudações
                         </a>
                         
