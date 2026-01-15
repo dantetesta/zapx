@@ -254,6 +254,50 @@ let processInterval = null;
 let lastSentCount = <?php echo $stats['sent']; ?>;
 let firstProcess = true;
 let campaignFinished = false;
+let countdownInterval = null;
+let currentCountdown = 0;
+
+// Funções de countdown do delay
+function startCountdown(nextSendAt, delay, sent, total) {
+    if (!nextSendAt) return;
+    
+    const targetTime = new Date(nextSendAt).getTime();
+    const now = Date.now();
+    let remaining = Math.max(0, Math.ceil((targetTime - now) / 1000));
+    
+    if (remaining <= 0) {
+        document.getElementById('activityText').textContent = `Preparando envio... (${sent}/${total})`;
+        return;
+    }
+    
+    // Evitar reiniciar se já está rodando com o mesmo delay
+    if (countdownInterval && currentCountdown === delay) return;
+    
+    stopCountdown();
+    currentCountdown = delay;
+    
+    const updateDisplay = () => {
+        const activityText = document.getElementById('activityText');
+        if (remaining > 0) {
+            activityText.innerHTML = `<span class="font-bold text-purple-700">⏱️ Próximo envio em ${remaining}s</span> <span class="text-xs opacity-75">(delay: ${delay}s)</span> (${sent}/${total})`;
+            remaining--;
+        } else {
+            activityText.textContent = `Preparando envio... (${sent}/${total})`;
+            stopCountdown();
+        }
+    };
+    
+    updateDisplay();
+    countdownInterval = setInterval(updateDisplay, 1000);
+}
+
+function stopCountdown() {
+    if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+        currentCountdown = 0;
+    }
+}
 
 // Adicionar log de atividade
 function addLog(message, type = 'info') {
@@ -374,10 +418,13 @@ async function updateStatus() {
                 document.getElementById('processingSpinner').classList.add('hidden');
             }
             
-            // Atualizar texto de atividade
+            // Atualizar texto de atividade e countdown
             const activityText = document.getElementById('activityText');
             if (c.processing > 0) {
                 activityText.textContent = `Enviando mensagem... (${c.sent}/${c.total})`;
+                stopCountdown();
+            } else if (c.pending > 0 && c.next_send_at) {
+                startCountdown(c.next_send_at, c.next_delay, c.sent, c.total);
             } else if (c.pending > 0) {
                 activityText.textContent = `Aguardando próximo envio... (${c.sent}/${c.total})`;
             }
@@ -386,6 +433,9 @@ async function updateStatus() {
             if (c.sent > lastSentCount) {
                 const diff = c.sent - lastSentCount;
                 addLog(`${diff} mensagem(ns) enviada(s) com sucesso`, 'success');
+                if (c.next_delay) {
+                    addLog(`Próximo disparo em ${c.next_delay}s (delay sorteado: ${c.min_interval}-${c.max_interval}s)`, 'info');
+                }
                 lastSentCount = c.sent;
             }
             

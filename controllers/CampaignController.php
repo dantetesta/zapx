@@ -221,7 +221,11 @@ class CampaignController extends Controller {
                 'processing' => $stats['processing_queue'],
                 'progress' => $progress,
                 'started_at' => $stats['started_at'],
-                'last_processed_at' => $stats['last_processed_at']
+                'last_processed_at' => $stats['last_processed_at'],
+                'next_delay' => $stats['next_delay'] ?? null,
+                'next_send_at' => $stats['next_send_at'] ?? null,
+                'min_interval' => $stats['min_interval'] ?? DISPATCH_MIN_INTERVAL,
+                'max_interval' => $stats['max_interval'] ?? DISPATCH_MAX_INTERVAL
             ]
         ]);
     }

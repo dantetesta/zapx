@@ -179,10 +179,18 @@ class QueueProcessor {
             $this->consecutiveFailures = 0; // Reset contador de falhas
             error_log("✅ [{$this->processId}] Enviado para {$item['contact_phone']}");
             
-            // Aguardar intervalo aleatório
+            // Sortear intervalo aleatório para o próximo envio
             $interval = rand($campaign['min_interval'], $campaign['max_interval']);
+            $nextSendAt = date('Y-m-d H:i:s', time() + $interval);
+            
+            // Salvar delay sorteado na campanha para exibição no monitor
+            $this->saveNextDelay($campaign['id'], $interval, $nextSendAt);
+            
             error_log("⏳ [{$this->processId}] Aguardando {$interval}s antes do próximo...");
             sleep($interval);
+            
+            // Limpar delay após aguardar
+            $this->clearNextDelay($campaign['id']);
             
             return true;
         } else {
@@ -501,5 +509,27 @@ class QueueProcessor {
         } finally {
             $this->releaseLock($campaignId);
         }
+    }
+
+    /**
+     * Salvar próximo delay sorteado para exibição no monitor
+     */
+    private function saveNextDelay($campaignId, $delay, $nextSendAt) {
+        $sql = "UPDATE dispatch_campaigns SET next_delay = :delay, next_send_at = :next_send_at WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            ':delay' => $delay,
+            ':next_send_at' => $nextSendAt,
+            ':id' => $campaignId
+        ]);
+    }
+
+    /**
+     * Limpar delay após aguardar
+     */
+    private function clearNextDelay($campaignId) {
+        $sql = "UPDATE dispatch_campaigns SET next_delay = NULL, next_send_at = NULL WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':id' => $campaignId]);
     }
 }
