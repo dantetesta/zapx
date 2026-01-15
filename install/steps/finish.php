@@ -78,6 +78,36 @@
         </ul>
     </div>
 
+    <!-- ALERTA CRON JOB - Sistema de Campanhas -->
+    <div class="bg-blue-50 border-l-4 border-blue-500 p-6 mb-8 text-left">
+        <h3 class="font-semibold text-blue-800 mb-3 flex items-center">
+            <i class="fas fa-clock mr-2"></i>
+            Recomendado - Configurar Cron Job
+        </h3>
+        <p class="text-blue-700 text-sm mb-4">
+            Para que as <strong>Campanhas de Disparo</strong> funcionem em segundo plano (sem precisar manter o navegador aberto), 
+            configure um Cron Job no seu servidor:
+        </p>
+        <div class="bg-blue-100 rounded-lg p-4 mb-4">
+            <p class="text-xs text-blue-600 mb-2 font-semibold">Comando do Cron (executar a cada minuto):</p>
+            <code class="text-blue-900 text-sm break-all block">* * * * * php <?php echo dirname(dirname($_SERVER['DOCUMENT_ROOT'] ?: '/home/usuario/public_html')); ?>/public_html/cron/process_queue.php >> /dev/null 2>&1</code>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <a href="docs/CRON_SETUP.md" target="_blank" class="inline-flex items-center px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition">
+                <i class="fas fa-book mr-1"></i>
+                Ver Documentação Completa
+            </a>
+            <span class="inline-flex items-center px-3 py-1 bg-blue-200 text-blue-800 text-xs font-medium rounded">
+                <i class="fas fa-info-circle mr-1"></i>
+                cPanel | DirectAdmin | Plesk
+            </span>
+        </div>
+        <p class="text-blue-600 text-xs mt-3">
+            <i class="fas fa-lightbulb mr-1"></i>
+            <strong>Sem cron?</strong> Não se preocupe! O sistema tem fallback automático via AJAX quando você monitora a campanha.
+        </p>
+    </div>
+
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
         <div class="bg-gray-50 p-6 rounded-lg text-left">
             <h4 class="font-semibold text-gray-900 mb-2 flex items-center">
