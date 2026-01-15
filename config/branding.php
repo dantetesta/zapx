@@ -27,7 +27,7 @@
  * - MINOR: Novas funcionalidades compatíveis
  * - PATCH: Correções de bugs
  */
-define('SYSTEM_VERSION', '3.2.3');
+define('SYSTEM_VERSION', '3.3.0');
 
 /**
  * Data da última atualização
