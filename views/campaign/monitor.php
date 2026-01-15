@@ -207,27 +207,36 @@ $statusLabels = [
                             'cancelled' => '<span class="px-2 py-1 text-xs font-medium rounded-full bg-gray-300 text-gray-600"><i class="fas fa-ban mr-1"></i>Cancelado</span>'
                         ];
                     ?>
-                    <div class="flex items-center justify-between p-3 rounded-lg border-2 transition-all duration-300 queue-item <?php echo $itemStatusColors[$item['status']] ?? 'bg-gray-50 border-gray-200'; ?>" 
+                    <div class="rounded-lg border-2 transition-all duration-300 queue-item overflow-hidden <?php echo $itemStatusColors[$item['status']] ?? 'bg-gray-50 border-gray-200'; ?>" 
                          data-id="<?php echo $item['id']; ?>" data-status="<?php echo $item['status']; ?>">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm
-                                <?php echo $item['status'] === 'sent' ? 'bg-green-500 text-white' : ($item['status'] === 'failed' ? 'bg-red-500 text-white' : ($item['status'] === 'processing' ? 'bg-blue-500 text-white' : 'bg-purple-100 text-purple-600')); ?>">
-                                <?php if ($item['status'] === 'sent'): ?>
-                                    <i class="fas fa-check"></i>
-                                <?php elseif ($item['status'] === 'failed'): ?>
-                                    <i class="fas fa-times"></i>
-                                <?php elseif ($item['status'] === 'processing'): ?>
-                                    <i class="fas fa-paper-plane"></i>
-                                <?php else: ?>
-                                    <?php echo strtoupper(substr($item['contact_name'] ?: 'S', 0, 1)); ?>
-                                <?php endif; ?>
+                        <div class="flex items-center justify-between p-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm
+                                    <?php echo $item['status'] === 'sent' ? 'bg-green-500 text-white' : ($item['status'] === 'failed' ? 'bg-red-500 text-white' : ($item['status'] === 'processing' ? 'bg-blue-500 text-white' : 'bg-purple-100 text-purple-600')); ?>">
+                                    <?php if ($item['status'] === 'sent'): ?>
+                                        <i class="fas fa-check"></i>
+                                    <?php elseif ($item['status'] === 'failed'): ?>
+                                        <i class="fas fa-times"></i>
+                                    <?php elseif ($item['status'] === 'processing'): ?>
+                                        <i class="fas fa-paper-plane"></i>
+                                    <?php else: ?>
+                                        <?php echo strtoupper(substr($item['contact_name'] ?: 'S', 0, 1)); ?>
+                                    <?php endif; ?>
+                                </div>
+                                <div>
+                                    <p class="font-medium text-gray-900 text-sm"><?php echo htmlspecialchars($item['contact_name'] ?: 'Sem nome'); ?></p>
+                                    <p class="text-xs text-gray-500"><?php echo htmlspecialchars($item['contact_phone']); ?></p>
+                                </div>
                             </div>
-                            <div>
-                                <p class="font-medium text-gray-900 text-sm"><?php echo htmlspecialchars($item['contact_name'] ?: 'Sem nome'); ?></p>
-                                <p class="text-xs text-gray-500"><?php echo htmlspecialchars($item['contact_phone']); ?></p>
+                            <div class="flex flex-col items-end gap-1">
+                                <?php echo $itemStatusBadges[$item['status']] ?? $itemStatusBadges['pending']; ?>
+                                <span class="delay-timer text-xs text-purple-600 font-bold hidden"></span>
                             </div>
                         </div>
-                        <?php echo $itemStatusBadges[$item['status']] ?? $itemStatusBadges['pending']; ?>
+                        <!-- Barra de progresso do delay -->
+                        <div class="delay-progress-container h-1 bg-gray-200 hidden">
+                            <div class="delay-progress-bar h-full bg-gradient-to-r from-purple-500 to-blue-500 transition-all ease-linear" style="width: 0%"></div>
+                        </div>
                     </div>
                     <?php endforeach; ?>
                 </div>
@@ -258,15 +267,20 @@ let countdownInterval = null;
 let currentCountdown = 0;
 
 // Funções de countdown do delay
+let delayProgressInterval = null;
+
 function startCountdown(nextSendAt, delay, sent, total) {
-    if (!nextSendAt) return;
+    if (!nextSendAt || !delay) return;
     
-    const targetTime = new Date(nextSendAt).getTime();
+    // Converter formato MySQL para ISO
+    const isoDate = nextSendAt.replace(' ', 'T') + '-03:00';
+    const targetTime = new Date(isoDate).getTime();
     const now = Date.now();
     let remaining = Math.max(0, Math.ceil((targetTime - now) / 1000));
     
     if (remaining <= 0) {
         document.getElementById('activityText').textContent = `Preparando envio... (${sent}/${total})`;
+        hideAllDelayBars();
         return;
     }
     
@@ -275,6 +289,12 @@ function startCountdown(nextSendAt, delay, sent, total) {
     
     stopCountdown();
     currentCountdown = delay;
+    
+    // Encontrar próximo contato pendente e mostrar barra
+    const nextPending = findNextPendingItem();
+    if (nextPending) {
+        showDelayBar(nextPending, delay, remaining);
+    }
     
     const updateDisplay = () => {
         const activityText = document.getElementById('activityText');
@@ -297,6 +317,81 @@ function stopCountdown() {
         countdownInterval = null;
         currentCountdown = 0;
     }
+    if (delayProgressInterval) {
+        clearInterval(delayProgressInterval);
+        delayProgressInterval = null;
+    }
+}
+
+// Encontrar próximo item pendente na fila
+function findNextPendingItem() {
+    const items = document.querySelectorAll('.queue-item');
+    for (const item of items) {
+        if (item.dataset.status === 'pending') {
+            return item;
+        }
+    }
+    return null;
+}
+
+// Mostrar barra de progresso do delay no item
+function showDelayBar(item, totalDelay, remaining) {
+    // Esconder todas as outras barras
+    hideAllDelayBars();
+    
+    const container = item.querySelector('.delay-progress-container');
+    const bar = item.querySelector('.delay-progress-bar');
+    const timer = item.querySelector('.delay-timer');
+    
+    if (!container || !bar) return;
+    
+    // Mostrar container e timer
+    container.classList.remove('hidden');
+    if (timer) {
+        timer.classList.remove('hidden');
+        timer.textContent = `${remaining}s`;
+    }
+    
+    // Destacar item como "próximo"
+    item.classList.add('ring-2', 'ring-purple-400', 'ring-offset-1');
+    
+    // Calcular progresso inicial
+    const elapsed = totalDelay - remaining;
+    let progress = (elapsed / totalDelay) * 100;
+    bar.style.width = progress + '%';
+    
+    // Animar barra
+    const startTime = Date.now();
+    const endTime = startTime + (remaining * 1000);
+    
+    if (delayProgressInterval) clearInterval(delayProgressInterval);
+    
+    delayProgressInterval = setInterval(() => {
+        const now = Date.now();
+        const totalDuration = totalDelay * 1000;
+        const elapsedFromStart = (totalDelay - remaining) * 1000 + (now - startTime);
+        const currentProgress = Math.min(100, (elapsedFromStart / totalDuration) * 100);
+        
+        bar.style.width = currentProgress + '%';
+        
+        // Atualizar timer
+        const remainingNow = Math.max(0, Math.ceil((endTime - now) / 1000));
+        if (timer) timer.textContent = `${remainingNow}s`;
+        
+        if (now >= endTime) {
+            bar.style.width = '100%';
+            if (timer) timer.textContent = '0s';
+            clearInterval(delayProgressInterval);
+            delayProgressInterval = null;
+        }
+    }, 100);
+}
+
+// Esconder todas as barras de delay
+function hideAllDelayBars() {
+    document.querySelectorAll('.delay-progress-container').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.delay-timer').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.queue-item').forEach(el => el.classList.remove('ring-2', 'ring-purple-400', 'ring-offset-1'));
 }
 
 // Adicionar log de atividade
