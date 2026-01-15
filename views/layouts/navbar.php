@@ -89,6 +89,10 @@
                             <i class="fas fa-user mr-2"></i>
                             Meu Perfil
                         </a>
+                        <a href="<?php echo APP_URL; ?>/greeting/index" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                            <i class="fas fa-hand-wave mr-2 text-purple-600"></i>
+                            Saudações
+                        </a>
                         
                         <?php if (isset($user['is_admin']) && $user['is_admin']): ?>
                         <hr class="my-2">

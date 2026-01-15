@@ -27,10 +27,12 @@ class QueueProcessor {
         require_once __DIR__ . '/../models/Campaign.php';
         require_once __DIR__ . '/../models/Queue.php';
         require_once __DIR__ . '/../models/User.php';
+        require_once __DIR__ . '/../models/Greeting.php';
         
         $this->campaignModel = new Campaign();
         $this->queueModel = new Queue();
         $this->userModel = new User();
+        $this->greetingModel = new Greeting();
     }
 
     /**
@@ -151,8 +153,21 @@ class QueueProcessor {
         }
         
         // Preparar mensagem (substituir macros)
-        $contactName = $item['contact_name'] ?: 'Cliente';
-        $message = str_replace('{nome}', $contactName, $campaign['message']);
+        $contactName = $item['contact_name'] ?: '';
+        $contactPhone = $item['contact_phone'] ?: '';
+        $message = $campaign['message'];
+        
+        // Processar macro {saudacao} se existir
+        if (strpos($message, '{saudacao}') !== false) {
+            $greetingTemplate = $this->greetingModel->getNextGreeting($campaign['id'], $campaign['user_id']);
+            $greetingText = $this->greetingModel->processGreeting($greetingTemplate, $contactName, $contactPhone);
+            $message = str_replace('{saudacao}', $greetingText, $message);
+        }
+        
+        // Substituir outros macros
+        $displayName = !empty(trim($contactName)) ? ucfirst(strtolower(explode(' ', trim($contactName))[0])) : 'Cliente';
+        $message = str_replace('{nome}', $displayName, $message);
+        $message = str_replace('{numero}', $contactPhone, $message);
         
         // Enviar mensagem
         $result = $this->sendMessage($user, $item['contact_phone'], $message, $campaign);

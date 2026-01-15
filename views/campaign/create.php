@@ -113,7 +113,7 @@ include 'views/layouts/navbar.php';
                             <div class="flex justify-between items-center mt-1">
                                 <p class="text-xs text-gray-500">
                                     <i class="fas fa-info-circle mr-1"></i>
-                                    Use <code class="bg-gray-100 px-1 rounded">{nome}</code> para inserir o nome do contato
+                                    Use os macros abaixo para personalizar
                                 </p>
                                 <span class="text-xs text-gray-400">
                                     <span id="charCount">0</span> caracteres
@@ -122,12 +122,35 @@ include 'views/layouts/navbar.php';
                         </div>
                         
                         <!-- Macros Rápidas -->
-                        <div class="flex flex-wrap gap-2">
+                        <div class="flex flex-wrap gap-2 items-center">
                             <span class="text-xs text-gray-500">Inserir:</span>
+                            <button type="button" onclick="insertMacro('{saudacao}')" 
+                                    class="px-3 py-1.5 text-xs bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 hover:from-purple-200 hover:to-blue-200 rounded-lg transition font-medium border border-purple-200"
+                                    title="Saudação personalizada com período do dia e nome">
+                                <i class="fas fa-hand-wave mr-1"></i>
+                                {saudacao}
+                            </button>
                             <button type="button" onclick="insertMacro('{nome}')" 
                                     class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition">
                                 {nome}
                             </button>
+                            <button type="button" onclick="insertMacro('{numero}')" 
+                                    class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition">
+                                {numero}
+                            </button>
+                            <a href="<?php echo APP_URL; ?>/greeting/index" target="_blank"
+                               class="text-xs text-purple-600 hover:text-purple-800 ml-2"
+                               title="Configurar suas saudações personalizadas">
+                                <i class="fas fa-cog"></i> Configurar
+                            </a>
+                        </div>
+                        
+                        <!-- Dica sobre {saudacao} -->
+                        <div class="bg-purple-50 border border-purple-200 rounded-lg p-3 text-xs">
+                            <p class="text-purple-700">
+                                <i class="fas fa-lightbulb mr-1"></i>
+                                <strong>{saudacao}</strong> gera automaticamente: "Bom dia, João, tudo bem?" - rotacionando entre suas saudações configuradas.
+                            </p>
                         </div>
                     </div>
                     
@@ -283,7 +306,19 @@ function updateMessagePreview() {
             return div.innerHTML;
         };
         
-        let preview = escapeHtml(messageText).replace(/{nome}/g, '<strong>João Silva</strong>');
+        // Detectar período do dia
+        const hora = new Date().getHours();
+        let periodo = 'Boa noite';
+        if (hora >= 5 && hora < 12) periodo = 'Bom dia';
+        else if (hora >= 12 && hora < 18) periodo = 'Boa tarde';
+        
+        // Simular saudação
+        const saudacaoExemplo = `${periodo}, <strong>João</strong>, tudo bem?`;
+        
+        let preview = escapeHtml(messageText);
+        preview = preview.replace(/{saudacao}/g, saudacaoExemplo);
+        preview = preview.replace(/{nome}/g, '<strong>João</strong>');
+        preview = preview.replace(/{numero}/g, '5511999999999');
         preview = preview.replace(/\n/g, '<br>');
         previewText.innerHTML = preview;
     } else {
