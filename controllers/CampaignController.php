@@ -254,6 +254,34 @@ class CampaignController extends Controller {
     }
 
     /**
+     * API: Status de todos os itens da fila (para atualização em tempo real)
+     */
+    public function queueStatus($id = null) {
+        $this->requireAuth();
+        
+        if (!$id) {
+            $this->json(['success' => false, 'message' => 'ID não informado'], 400);
+            return;
+        }
+        
+        $user = $this->getCurrentUser();
+        $campaign = $this->campaignModel->findById($id, $user['id']);
+        
+        if (!$campaign) {
+            $this->json(['success' => false, 'message' => 'Campanha não encontrada'], 404);
+            return;
+        }
+        
+        // Buscar todos os itens com status atualizado
+        $items = $this->queueModel->getItems($id, 500);
+        
+        $this->json([
+            'success' => true,
+            'items' => $items
+        ]);
+    }
+
+    /**
      * API: Pausar campanha
      */
     public function pause($id = null) {
