@@ -253,6 +253,7 @@ let pollInterval = null;
 let processInterval = null;
 let lastSentCount = <?php echo $stats['sent']; ?>;
 let firstProcess = true;
+let campaignFinished = false;
 
 // Adicionar log de atividade
 function addLog(message, type = 'info') {
@@ -398,10 +399,13 @@ async function updateStatus() {
                 const remaining = c.pending * avgTime;
                 const minutes = Math.ceil(remaining / 60);
                 document.getElementById('estimatedTime').textContent = `Tempo estimado: ~${minutes} min`;
-            } else if (c.pending === 0) {
+            } else if (c.pending === 0 && !campaignFinished) {
                 document.getElementById('estimatedTime').textContent = 'Concluído!';
                 document.getElementById('activityIndicator').classList.add('hidden');
+                document.getElementById('processingSpinner').classList.add('hidden');
                 addLog('Campanha concluída!', 'success');
+                campaignFinished = true;
+                stopPolling();
             }
             
             // Atualizar lista de contatos
