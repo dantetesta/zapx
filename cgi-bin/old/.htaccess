@@ -1,0 +1,86 @@
+# ========================================
+# ZAPX - Configurações Apache
+# Autor: Dante Testa (https://dantetesta.com.br)
+# Data: 2025-10-26 07:55:00
+# Versão: 2.0.0
+# ========================================
+
+# ========================================
+# ANTI-CACHE - CRÍTICO PARA DESENVOLVIMENTO
+# ========================================
+
+<IfModule mod_headers.c>
+    # Desabilitar cache completamente para PHP
+    <FilesMatch "\.(php)$">
+        Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+        Header set Pragma "no-cache"
+        Header set Expires "0"
+    </FilesMatch>
+    
+    # Cache controlado para assets estáticos
+    <FilesMatch "\.(js|css)$">
+        Header set Cache-Control "no-cache, must-revalidate, max-age=0"
+        Header set Pragma "no-cache"
+    </FilesMatch>
+    
+    # Prevenir cache de AJAX/JSON
+    <FilesMatch "\.(json)$">
+        Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+        Header set Pragma "no-cache"
+        Header set Expires "0"
+    </FilesMatch>
+</IfModule>
+
+# ========================================
+# CONFIGURAÇÕES DE UPLOAD
+# ========================================
+
+# Limites do WhatsApp API
+# Imagens: 5MB | Vídeos/Docs/Áudio: 16MB
+# Configurando com margem de segurança
+
+# Tamanho máximo de arquivo individual
+php_value upload_max_filesize 20M
+
+# Tamanho máximo do POST (deve ser maior que upload_max_filesize)
+php_value post_max_size 25M
+
+# Tempo máximo de execução (5 minutos para uploads grandes)
+php_value max_execution_time 300
+
+# Tempo máximo para receber dados (5 minutos)
+php_value max_input_time 300
+
+# Memória disponível para o script
+php_value memory_limit 256M
+
+# Habilitar uploads de arquivo
+php_flag file_uploads On
+
+# Número máximo de arquivos por upload
+php_value max_file_uploads 20
+
+# ========================================
+# SEGURANÇA
+# ========================================
+
+# Desabilitar listagem de diretórios
+Options -Indexes
+
+# Proteger arquivos sensíveis
+<FilesMatch "^(\.env|\.git|config\.php|installed\.lock)">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+RewriteEngine On
+RewriteBase /
+
+# Redirecionar para HTTPS (opcional, descomente se necessário)
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Redirecionar todas as requisições para index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php?url=$1 [QSA,L]

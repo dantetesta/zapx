@@ -1,0 +1,390 @@
+<?php
+/**
+ * Model de Contato
+ * Autor: Dante Testa (https://dantetesta.com.br)
+ * Data: 2025-10-25 20:23:00
+ */
+
+class Contact {
+    private $db;
+
+    public function __construct() {
+        $this->db = Database::getInstance()->getConnection();
+    }
+
+    /**
+     * Criar novo contato
+     */
+    public function create($userId, $name, $phone) {
+        // Limpar telefone (remover caracteres especiais)
+        $phone = preg_replace('/[^0-9]/', '', $phone);
+        
+        $sql = "INSERT INTO contacts (user_id, name, phone) VALUES (:user_id, :name, :phone)";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            ':user_id' => $userId,
+            ':name' => $name,
+            ':phone' => $phone
+        ]);
+        
+        return $this->db->lastInsertId();
+    }
+
+    /**
+     * Buscar contato por ID
+     */
+    public function findById($id, $userId) {
+        $sql = "SELECT c.*, GROUP_CONCAT(t.id) as tag_ids, GROUP_CONCAT(t.name) as tag_names, GROUP_CONCAT(t.color) as tag_colors
+                FROM contacts c
+                LEFT JOIN contact_tags ct ON c.id = ct.contact_id
+                LEFT JOIN tags t ON ct.tag_id = t.id
+                WHERE c.id = :id AND c.user_id = :user_id
+                GROUP BY c.id
+                LIMIT 1";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':id' => $id, ':user_id' => $userId]);
+        return $stmt->fetch();
+    }
+
+    /**
+     * Listar contatos do usuário com paginação
+     */
+    public function getByUser($userId, $search = null, $tagId = null, $page = 1, $perPage = 20) {
+        $offset = ($page - 1) * $perPage;
+        
+        $sql = "SELECT c.*, GROUP_CONCAT(DISTINCT t.id) as tag_ids, 
+                GROUP_CONCAT(DISTINCT t.name) as tag_names, 
+                GROUP_CONCAT(DISTINCT t.color) as tag_colors
+                FROM contacts c
+                LEFT JOIN contact_tags ct ON c.id = ct.contact_id
+                LEFT JOIN tags t ON ct.tag_id = t.id
+                WHERE c.user_id = :user_id";
+        
+        $params = [':user_id' => $userId];
+
+        if ($search) {
+            $sql .= " AND (c.name LIKE :search OR c.phone LIKE :search)";
+            $params[':search'] = "%$search%";
+        }
+
+        if ($tagId) {
+            $sql .= " AND c.id IN (SELECT contact_id FROM contact_tags WHERE tag_id = :tag_id)";
+            $params[':tag_id'] = $tagId;
+        }
+
+        $sql .= " GROUP BY c.id ORDER BY c.created_at DESC LIMIT :limit OFFSET :offset";
+        
+        $stmt = $this->db->prepare($sql);
+        
+        // Bind dos parâmetros
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+        $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+    
+    /**
+     * Contar total de contatos (para paginação)
+     */
+    public function countByUser($userId, $search = null, $tagId = null) {
+        $sql = "SELECT COUNT(DISTINCT c.id) as total
+                FROM contacts c
+                LEFT JOIN contact_tags ct ON c.id = ct.contact_id
+                WHERE c.user_id = :user_id";
+        
+        $params = [':user_id' => $userId];
+
+        if ($search) {
+            $sql .= " AND (c.name LIKE :search OR c.phone LIKE :search)";
+            $params[':search'] = "%$search%";
+        }
+
+        if ($tagId) {
+            $sql .= " AND c.id IN (SELECT contact_id FROM contact_tags WHERE tag_id = :tag_id)";
+            $params[':tag_id'] = $tagId;
+        }
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $result = $stmt->fetch();
+        return $result['total'] ?? 0;
+    }
+
+    /**
+     * Atualizar contato
+     */
+    public function update($id, $userId, $name, $phone) {
+        $phone = preg_replace('/[^0-9]/', '', $phone);
+        
+        $sql = "UPDATE contacts SET name = :name, phone = :phone WHERE id = :id AND user_id = :user_id";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([
+            ':name' => $name,
+            ':phone' => $phone,
+            ':id' => $id,
+            ':user_id' => $userId
+        ]);
+    }
+
+    /**
+     * Deletar contato
+     */
+    public function delete($id, $userId) {
+        $sql = "DELETE FROM contacts WHERE id = :id AND user_id = :user_id";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([':id' => $id, ':user_id' => $userId]);
+    }
+    
+    /**
+     * Deletar múltiplos contatos
+     */
+    public function deleteMultiple($ids, $userId) {
+        if (empty($ids) || !is_array($ids)) {
+            return false;
+        }
+        
+        // Criar placeholders para IN clause
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        
+        $sql = "DELETE FROM contacts WHERE id IN ($placeholders) AND user_id = ?";
+        $stmt = $this->db->prepare($sql);
+        
+        // Bind dos IDs + userId
+        $params = array_merge($ids, [$userId]);
+        
+        return $stmt->execute($params);
+    }
+
+    /**
+     * Adicionar tag ao contato
+     */
+    public function addTag($contactId, $tagId) {
+        $sql = "INSERT IGNORE INTO contact_tags (contact_id, tag_id) VALUES (:contact_id, :tag_id)";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([':contact_id' => $contactId, ':tag_id' => $tagId]);
+    }
+
+    /**
+     * Remover tag do contato
+     */
+    public function removeTag($contactId, $tagId) {
+        $sql = "DELETE FROM contact_tags WHERE contact_id = :contact_id AND tag_id = :tag_id";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([':contact_id' => $contactId, ':tag_id' => $tagId]);
+    }
+
+    /**
+     * Remover todas as tags do contato
+     */
+    public function removeAllTags($contactId) {
+        $sql = "DELETE FROM contact_tags WHERE contact_id = :contact_id";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([':contact_id' => $contactId]);
+    }
+
+    /**
+     * Importar contatos de CSV com suporte a tags e DDI padrão
+     */
+    public function importFromCSV($userId, $csvData) {
+        $imported = 0;
+        $errors = [];
+        
+        // Buscar DDI padrão do usuário
+        $sql = "SELECT default_country_code FROM users WHERE id = :user_id LIMIT 1";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':user_id' => $userId]);
+        $user = $stmt->fetch();
+        $defaultDDI = $user['default_country_code'] ?? '55';
+
+        foreach ($csvData as $index => $row) {
+            // Pular linha de cabeçalho
+            if ($index === 0) continue;
+
+            // Verificar se tem pelo menos o telefone
+            if (empty($row[0]) && empty($row[1])) {
+                continue;
+            }
+
+            // Determinar qual coluna é o telefone
+            $phone = '';
+            $name = '';
+            $tagString = '';
+
+            // Se primeira coluna parece ser telefone
+            if (preg_match('/[0-9]/', $row[0])) {
+                $phone = $row[0];
+                $name = $row[1] ?? '';
+                $tagString = $row[2] ?? '';
+            } else {
+                $name = $row[0];
+                $phone = $row[1] ?? '';
+                $tagString = $row[2] ?? '';
+            }
+
+            // Limpar telefone (remover apenas espaços, parênteses, hífens, mas manter +)
+            $phone = preg_replace('/[^0-9+]/', '', $phone);
+            // Remover + do início se existir
+            $phone = ltrim($phone, '+');
+
+            // Verificar se número tem DDI
+            // Se tiver menos de 12 dígitos, provavelmente não tem DDI
+            if (strlen($phone) < 12) {
+                // Adicionar DDI padrão do usuário
+                $phone = $defaultDDI . $phone;
+            }
+
+            // Validar telefone (mínimo 10 dígitos)
+            if (empty($phone) || strlen($phone) < 10) {
+                $errors[] = "Linha " . ($index + 1) . ": Telefone inválido";
+                continue;
+            }
+
+            try {
+                // Criar contato
+                $contactId = $this->create($userId, $name ?: null, $phone);
+                
+                // Processar tags se houver
+                if (!empty($tagString)) {
+                    $this->processContactTags($contactId, $userId, $tagString);
+                }
+                
+                $imported++;
+            } catch (Exception $e) {
+                $errors[] = "Linha " . ($index + 1) . ": " . $e->getMessage();
+            }
+        }
+
+        return [
+            'imported' => $imported,
+            'errors' => $errors
+        ];
+    }
+
+    /**
+     * Processar tags do contato durante importação
+     */
+    private function processContactTags($contactId, $userId, $tagString) {
+        // Separar múltiplas tags (separadas por | ou ;)
+        $tagNames = preg_split('/[|;]/', $tagString);
+        
+        foreach ($tagNames as $tagName) {
+            $tagName = trim($tagName);
+            if (empty($tagName)) continue;
+
+            // Buscar ou criar tag
+            $tag = $this->findOrCreateTag($userId, $tagName);
+            
+            if ($tag) {
+                // Vincular tag ao contato
+                $this->addTagToContact($contactId, $tag['id']);
+            }
+        }
+    }
+
+    /**
+     * Buscar ou criar tag
+     */
+    private function findOrCreateTag($userId, $tagName) {
+        // Buscar tag existente
+        $sql = "SELECT * FROM tags WHERE user_id = :user_id AND name = :name LIMIT 1";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            ':user_id' => $userId,
+            ':name' => $tagName
+        ]);
+        $tag = $stmt->fetch();
+
+        // Se não existir, criar
+        if (!$tag) {
+            $colors = ['blue', 'green', 'red', 'yellow', 'purple', 'pink', 'indigo', 'gray'];
+            $randomColor = $colors[array_rand($colors)];
+            
+            $sql = "INSERT INTO tags (user_id, name, color) VALUES (:user_id, :name, :color)";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                ':user_id' => $userId,
+                ':name' => $tagName,
+                ':color' => $randomColor
+            ]);
+            
+            $tagId = $this->db->lastInsertId();
+            
+            $tag = [
+                'id' => $tagId,
+                'name' => $tagName,
+                'color' => $randomColor
+            ];
+        }
+
+        return $tag;
+    }
+
+    /**
+     * Adicionar tag ao contato
+     */
+    private function addTagToContact($contactId, $tagId) {
+        // Verificar se já existe o vínculo
+        $sql = "SELECT id FROM contact_tags WHERE contact_id = :contact_id AND tag_id = :tag_id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            ':contact_id' => $contactId,
+            ':tag_id' => $tagId
+        ]);
+        
+        if ($stmt->fetch()) {
+            return true; // Já vinculado
+        }
+
+        // Criar vínculo
+        $sql = "INSERT INTO contact_tags (contact_id, tag_id) VALUES (:contact_id, :tag_id)";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([
+            ':contact_id' => $contactId,
+            ':tag_id' => $tagId
+        ]);
+    }
+
+    /**
+     * Verificar se telefone já existe para o usuário
+     */
+    public function phoneExists($userId, $phone, $excludeId = null) {
+        $phone = preg_replace('/[^0-9]/', '', $phone);
+        
+        $sql = "SELECT id FROM contacts WHERE user_id = :user_id AND phone = :phone";
+        $params = [':user_id' => $userId, ':phone' => $phone];
+        
+        if ($excludeId) {
+            $sql .= " AND id != :exclude_id";
+            $params[':exclude_id'] = $excludeId;
+        }
+        
+        $sql .= " LIMIT 1";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetch() !== false;
+    }
+
+    /**
+     * Obter tags de um contato específico
+     */
+    public function getContactTags($contactId, $userId) {
+        $sql = "SELECT t.id, t.name, t.color 
+                FROM tags t 
+                INNER JOIN contact_tags ct ON t.id = ct.tag_id 
+                WHERE ct.contact_id = :contact_id AND t.user_id = :user_id";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            ':contact_id' => $contactId,
+            ':user_id' => $userId
+        ]);
+        
+        return $stmt->fetchAll();
+    }
+}

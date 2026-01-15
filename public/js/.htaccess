@@ -1,0 +1,5 @@
+# Bloquear acesso ao logger.js (causava conflitos)
+<Files "logger.js">
+    Order Allow,Deny
+    Deny from all
+</Files>

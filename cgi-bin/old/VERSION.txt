@@ -1,0 +1,108 @@
+2.4.0
+Data: 2025-10-26 19:12:00
+Autor: Dante Testa - https://dantetesta.com.br
+
+CHANGELOG v2.4.0 - SEÇÃO WHITE LABEL PROFISSIONAL:
+✅ Removido depoimento da landing page
+✅ Criada seção de venda do sistema (White Label):
+   - Design premium com gradiente purple/blue/indigo
+   - Efeitos de brilho animados (pulse)
+   - Badge "OPORTUNIDADE DE NEGÓCIO" com bounce
+   - Preço destaque: R$ 297 (investimento único)
+   - Cards de benefícios: Código-fonte + Uso ilimitado
+   - Suporte técnico opcional: R$ 200/hora
+   - Aviso legal profissional sobre API não oficial
+   - Disclaimer sobre reembolso e riscos
+   - CTA verde com WhatsApp integrado
+   - Totalmente responsivo
+✅ Copy profissional e transparente
+✅ Design moderno com glassmorphism
+
+CHANGELOG v2.3.0 - INTERFACE DE DISPARO MELHORADA:
+✅ Textarea MAIOR (10 linhas) para melhor visualização da mensagem
+✅ Contador de caracteres em tempo real
+✅ Preview WhatsApp REALISTA com:
+   - Fundo padrão do WhatsApp com padrão
+   - Bolha verde (#DCF8C6) estilo mensagem enviada
+   - Triângulo característico da bolha
+   - Hora atual + check duplo azul
+   - Substituição de {nome} por exemplo visual
+   - Preview de mídia integrado
+✅ Fila em OFFCANVAS (lateral direita):
+   - Aparece APENAS após iniciar o disparo
+   - Backdrop escuro com blur
+   - Animação suave de entrada/saída
+   - Botão de fechar no header
+   - Largura responsiva (100% mobile, 384px desktop)
+✅ Layout centralizado (max-width 4xl)
+✅ Melhor UX e visualização antes de enviar
+
+CHANGELOG v2.2.0 - LANDING PAGE ATUALIZADA:
+✅ Removidas referências a chatbot (sistema é apenas disparo em massa)
+✅ Criados 3 novos planos de preços:
+   - Plano Start: R$ 30/mês (até 1.000 mensagens)
+   - Plano Personal: R$ 50/mês (até 5.000 mensagens) - POPULAR
+   - Plano Business: R$ 100/mês (até 15.000 mensagens)
+✅ Funcionalidades atualizadas para refletir o sistema real:
+   - Disparo em massa (lista toda, tags específicas, individual)
+   - Envio de mídias (fotos, vídeos, áudios, documentos, texto)
+   - Classificação por tags
+   - Contatos ilimitados
+   - Importar/Exportar CSV
+✅ Hero section atualizada com descrição correta
+✅ Stats atualizados (15K mensagens/mês, ∞ contatos)
+✅ Meta tags SEO otimizadas
+✅ Depoimento atualizado
+✅ Design responsivo mantido
+
+CHANGELOG v2.1.0 - SISTEMA DE BRANDING CONFIGURÁVEL:
+✅ Criado arquivo config/branding.php com configurações personalizáveis
+✅ Rodapé completamente configurável (nome, descrição, desenvolvedor, versão)
+✅ Opção para ocultar rodapé completamente
+✅ Suporte a texto customizado
+✅ Cores de link personalizáveis (purple, blue, green, red, etc)
+✅ Controle de abertura de link (nova aba ou mesma aba)
+✅ Arquivo de exemplos (branding.example.php)
+✅ Documentação completa (PERSONALIZACAO_BRANDING.md)
+✅ Ideal para white label e revendas
+
+CHANGELOG v2.0.1 - FIX CRÍTICO:
+✅ Corrigido URL da requisição AJAX em conectar-whatsapp.php
+✅ Estava chamando /test_criar_direto.php (inexistente)
+✅ Agora chama /whatsapp/createInstance (endpoint correto)
+✅ Adicionado header X-Requested-With para identificar AJAX
+✅ Adicionado cache: 'no-store' na requisição
+
+CHANGELOG v2.0.0 - SISTEMA ANTI-CACHE PROFISSIONAL:
+✅ Criada classe AntiCache.php com sistema multicamadas
+✅ Headers HTTP anti-cache no .htaccess (Apache)
+✅ Controller base aplica anti-cache automaticamente
+✅ Método json() centralizado com limpeza de buffer
+✅ WhatsAppController refatorado para usar $this->json()
+✅ Cache busting automático em URLs
+✅ Proteção contra cache de PHP, JS, CSS e JSON
+✅ Limpeza automática de OPcache e StatCache
+
+ARQUIVOS CRIADOS/MODIFICADOS:
+- core/AntiCache.php (NOVO)
+- core/Controller.php (v2.0.0)
+- controllers/WhatsAppController.php (v1.0.4)
+- .htaccess (v2.0.0)
+
+CHANGELOG v1.0.4:
+- FIX CRÍTICO: Output buffering robusto em createInstance()
+- Limpa TODOS os buffers existentes antes de iniciar
+- ob_end_clean() antes de CADA echo json_encode()
+- Elimina qualquer output HTML/espaços/BOM que cause erro "Unexpected token '<'"
+
+CHANGELOG v1.0.3:
+- FIX: Instalador agora destrói sessão corretamente ao finalizar
+- Criado complete.php para limpar sessão e redirecionar para home
+- Usuário não fica logado automaticamente após instalação
+- Redirecionamento correto para landing page (home/index)
+
+CHANGELOG v1.0.2:
+- FIX CRÍTICO: Correção erro "Unexpected token '<'" em requisições AJAX
+- Substituído requireAuth() por isLoggedIn() em todos métodos AJAX do WhatsAppController
+- requireAuth() fazia redirect HTML, conflitando com header JSON
+- Todos os métodos agora retornam JSON puro: createInstance, getQRCode, checkStatus, disconnect, deleteInstance

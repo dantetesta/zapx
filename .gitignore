@@ -1,0 +1,50 @@
+# ============================================
+# GitIgnore - ZAPX
+# Autor: Dante Testa (https://dantetesta.com.br)
+# ============================================
+
+# Credenciais (NUNCA versionar!)
+deploy/.env.deploy
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+error_log
+
+# Cache
+cache/
+.cache/
+
+# Uploads (mídias dos usuários)
+uploads/media/*
+!uploads/media/.gitkeep
+
+# Vendor (dependências)
+vendor/
+
+# Node
+node_modules/
+
+# Backups
+*.sql.gz
+*.tar.gz
+*.zip
+backups/
+
+# OS Files
+.DS_Store
+Thumbs.db
+.ftpquota
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Temporários
+*.tmp
+*.temp

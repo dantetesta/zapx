@@ -1,0 +1,22 @@
+# ============================================
+# GitIgnore para Deploy - ZAPX
+# ============================================
+
+# Credenciais (NUNCA versionar!)
+.env.deploy
+*.env
+
+# Logs
+logs/
+*.log
+
+# Backups
+backups/
+*.sql.gz
+*.tar.gz
+
+# Temporários
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
