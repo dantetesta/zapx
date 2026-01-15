@@ -79,37 +79,99 @@ include 'views/layouts/navbar.php';
                     Mensagem
                 </h3>
                 
-                <div class="space-y-4">
-                    <!-- Tipo de Mídia -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Mensagem</label>
-                        <select name="media_type" id="mediaType" onchange="updateMediaType()"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                            <option value="text">📝 Apenas Texto</option>
-                            <option value="image">🖼️ Imagem + Texto</option>
-                            <option value="video">🎥 Vídeo + Texto</option>
-                            <option value="audio">🎵 Áudio</option>
-                            <option value="document">📄 Documento + Texto</option>
-                        </select>
-                    </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Coluna Esquerda: Formulário -->
+                    <div class="space-y-4">
+                        <!-- Tipo de Mídia -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Mensagem</label>
+                            <select name="media_type" id="mediaType" onchange="updateMediaType()"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                                <option value="text">📝 Apenas Texto</option>
+                                <option value="image">🖼️ Imagem + Texto</option>
+                                <option value="video">🎥 Vídeo + Texto</option>
+                                <option value="audio">🎵 Áudio</option>
+                                <option value="document">📄 Documento + Texto</option>
+                            </select>
+                        </div>
 
-                    <!-- Upload de Mídia -->
-                    <div id="mediaUpload" class="hidden">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Arquivo</label>
-                        <input type="file" name="media_file" id="mediaFile" 
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
-                        <p id="mediaHint" class="text-xs text-gray-500 mt-1"></p>
-                    </div>
+                        <!-- Upload de Mídia -->
+                        <div id="mediaUpload" class="hidden">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Arquivo</label>
+                            <input type="file" name="media_file" id="mediaFile" onchange="updateFilePreview()"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                            <p id="mediaHint" class="text-xs text-gray-500 mt-1"></p>
+                        </div>
 
-                    <!-- Texto da Mensagem -->
+                        <!-- Texto da Mensagem -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Texto da Mensagem</label>
+                            <textarea name="message" id="messageText" rows="6"
+                                      placeholder="Digite sua mensagem aqui...&#10;&#10;Use {nome} para personalizar"
+                                      oninput="updateMessagePreview()"
+                                      class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"></textarea>
+                            <div class="flex justify-between items-center mt-1">
+                                <p class="text-xs text-gray-500">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Use <code class="bg-gray-100 px-1 rounded">{nome}</code> para inserir o nome do contato
+                                </p>
+                                <span class="text-xs text-gray-400">
+                                    <span id="charCount">0</span> caracteres
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- Macros Rápidas -->
+                        <div class="flex flex-wrap gap-2">
+                            <span class="text-xs text-gray-500">Inserir:</span>
+                            <button type="button" onclick="insertMacro('{nome}')" 
+                                    class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition">
+                                {nome}
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Coluna Direita: Preview WhatsApp -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Texto da Mensagem</label>
-                        <textarea name="message" id="messageText" rows="6"
-                                  placeholder="Digite sua mensagem aqui...&#10;&#10;Use {nome} para personalizar"
-                                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"></textarea>
-                        <p class="text-xs text-gray-500 mt-1">
-                            <i class="fas fa-info-circle mr-1"></i>
-                            Use <code class="bg-gray-100 px-1 rounded">{nome}</code> para inserir o nome do contato
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fab fa-whatsapp mr-1 text-green-600"></i>
+                            Preview da Mensagem
+                        </label>
+                        <div class="bg-[#ECE5DD] rounded-lg p-4 min-h-[280px]" style="background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9InAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCI+PHBhdGggZD0iTTAgMzAgTDMwIDAgTDYwIDMwIEwzMCA2MCBaIiBmaWxsPSJub25lIiBzdHJva2U9IiNkNWQ1ZDUiIHN0cm9rZS13aWR0aD0iMC41IiBvcGFjaXR5PSIwLjMiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjcCkiLz48L3N2Zz4=');">
+                            <div class="flex justify-end">
+                                <div class="bg-[#DCF8C6] rounded-lg p-3 shadow-md max-w-[280px] relative" style="border-radius: 7.5px;">
+                                    <!-- Preview de Mídia -->
+                                    <div id="mediaPreviewWhatsApp" class="hidden mb-2">
+                                        <div id="mediaPreviewContent" class="bg-gray-200 rounded-md overflow-hidden">
+                                            <!-- Imagem preview -->
+                                            <img id="imagePreviewWA" src="" alt="" class="hidden w-full h-32 object-cover">
+                                            <!-- Placeholder mídia -->
+                                            <div id="mediaPlaceholder" class="p-6 text-center">
+                                                <i id="previewIconWhatsApp" class="fas fa-image text-3xl text-gray-400 mb-2"></i>
+                                                <p id="previewFileName" class="text-xs text-gray-500 truncate"></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Texto da Mensagem -->
+                                    <div id="messagePreviewText" class="text-sm text-gray-800 whitespace-pre-wrap break-words" style="font-family: 'Segoe UI', Helvetica, Arial, sans-serif;">
+                                        <span class="text-gray-400 italic">Sua mensagem aparecerá aqui...</span>
+                                    </div>
+                                    
+                                    <!-- Hora e Check -->
+                                    <div class="flex items-center justify-end gap-1 mt-1">
+                                        <span class="text-xs text-gray-500" id="previewTime"></span>
+                                        <i class="fas fa-check-double text-blue-500 text-xs"></i>
+                                    </div>
+                                    
+                                    <!-- Triângulo da bolha -->
+                                    <div style="position: absolute; right: -8px; top: 0; width: 0; height: 0; border-left: 8px solid #DCF8C6; border-top: 8px solid transparent;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2 text-center">
+                            <i class="fas fa-eye mr-1"></i>
+                            Visualização aproximada de como ficará no WhatsApp
                         </p>
                     </div>
                 </div>
@@ -141,6 +203,16 @@ include 'views/layouts/navbar.php';
 
 <script>
 const totalContacts = <?php echo $totalContacts; ?>;
+let currentMediaType = 'text';
+let selectedFileName = '';
+
+// Atualizar hora do preview
+function updatePreviewTime() {
+    const now = new Date();
+    document.getElementById('previewTime').textContent = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+updatePreviewTime();
+setInterval(updatePreviewTime, 60000);
 
 function updateContactCount() {
     const type = document.getElementById('dispatchType').value;
@@ -164,9 +236,13 @@ function updateMediaType() {
     const mediaFile = document.getElementById('mediaFile');
     const mediaHint = document.getElementById('mediaHint');
     
+    currentMediaType = type;
+    
     if (type === 'text') {
         mediaUpload.classList.add('hidden');
         mediaFile.removeAttribute('required');
+        mediaFile.value = '';
+        selectedFileName = '';
     } else {
         mediaUpload.classList.remove('hidden');
         mediaFile.setAttribute('required', 'required');
@@ -188,6 +264,100 @@ function updateMediaType() {
         mediaHint.textContent = hints[type] || '';
         mediaFile.accept = accepts[type] || '';
     }
+    
+    updateMediaPreviewWhatsApp();
+}
+
+// Atualizar preview da mensagem
+function updateMessagePreview() {
+    const messageText = document.getElementById('messageText').value;
+    const previewText = document.getElementById('messagePreviewText');
+    const charCount = document.getElementById('charCount');
+    
+    charCount.textContent = messageText.length;
+    
+    if (messageText.trim()) {
+        const escapeHtml = (text) => {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        };
+        
+        let preview = escapeHtml(messageText).replace(/{nome}/g, '<strong>João Silva</strong>');
+        preview = preview.replace(/\n/g, '<br>');
+        previewText.innerHTML = preview;
+    } else {
+        previewText.innerHTML = '<span class="text-gray-400 italic">Sua mensagem aparecerá aqui...</span>';
+    }
+}
+
+// Inserir macro no texto
+function insertMacro(macro) {
+    const textarea = document.getElementById('messageText');
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    
+    textarea.value = text.substring(0, start) + macro + text.substring(end);
+    textarea.focus();
+    textarea.selectionStart = textarea.selectionEnd = start + macro.length;
+    
+    updateMessagePreview();
+}
+
+// Atualizar preview do arquivo selecionado
+function updateFilePreview() {
+    const fileInput = document.getElementById('mediaFile');
+    const file = fileInput.files[0];
+    
+    if (file) {
+        selectedFileName = file.name;
+        
+        // Se for imagem, mostrar preview real
+        if (currentMediaType === 'image' && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const imgPreview = document.getElementById('imagePreviewWA');
+                imgPreview.src = e.target.result;
+                imgPreview.classList.remove('hidden');
+                document.getElementById('mediaPlaceholder').classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+        } else {
+            document.getElementById('imagePreviewWA').classList.add('hidden');
+            document.getElementById('mediaPlaceholder').classList.remove('hidden');
+        }
+    } else {
+        selectedFileName = '';
+        document.getElementById('imagePreviewWA').classList.add('hidden');
+        document.getElementById('mediaPlaceholder').classList.remove('hidden');
+    }
+    
+    updateMediaPreviewWhatsApp();
+}
+
+// Atualizar preview de mídia no WhatsApp
+function updateMediaPreviewWhatsApp() {
+    const mediaPreview = document.getElementById('mediaPreviewWhatsApp');
+    const iconEl = document.getElementById('previewIconWhatsApp');
+    const fileNameEl = document.getElementById('previewFileName');
+    
+    if (currentMediaType === 'text') {
+        mediaPreview.classList.add('hidden');
+        return;
+    }
+    
+    mediaPreview.classList.remove('hidden');
+    
+    const icons = {
+        'image': 'fas fa-image',
+        'video': 'fas fa-video',
+        'audio': 'fas fa-music',
+        'document': 'fas fa-file-alt'
+    };
+    
+    iconEl.className = (icons[currentMediaType] || 'fas fa-file') + ' text-3xl text-gray-400 mb-2';
+    fileNameEl.textContent = selectedFileName || 'Selecione um arquivo...';
 }
 
 document.getElementById('campaignForm').addEventListener('submit', async function(e) {
